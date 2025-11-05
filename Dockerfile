@@ -10,13 +10,14 @@ RUN apk add --no-cache git make
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
-COPY cmd/ ./cmd/
-COPY internal/ ./internal/
-COPY web/ ./web/
-COPY migrations/ ./migrations/
-COPY config.example.yaml ./
-COPY sqlc.yaml ./
+# Copy everything (except what's in .dockerignore)
+COPY . .
+
+# Debug: Verify directory structure exists
+RUN echo "=== Root directory ===" && ls -la /app/ && \
+    echo "=== cmd directory ===" && ls -la /app/cmd/ && \
+    echo "=== cmd/removarr directory ===" && ls -la /app/cmd/removarr/ && \
+    echo "=== cmd/migrate directory ===" && ls -la /app/cmd/migrate/ || true
 
 # Build the application and migration tool
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o removarr ./cmd/removarr && \
