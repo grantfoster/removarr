@@ -24,6 +24,11 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: removarr
+    # For Podman: use host.containers.internal to access host services
+    # For Docker: use host.docker.internal
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
