@@ -11,7 +11,7 @@ services:
     volumes:
       - removarr-postgres-data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-127.0.0.1:5432}:5432"  # Bind to localhost by default
+      - "127.0.0.1:5432:5432"  # Bind to localhost so removarr (on host network) can access it
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-removarr}"]
       interval: 10s
@@ -24,17 +24,13 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: removarr
-    # For Podman: use host.containers.internal to access host services
-    # For Docker: use host.docker.internal
-    extra_hosts:
-      - "host.containers.internal:host-gateway"
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # Use host network mode so localhost works (for accessing Overseerr, Sonarr, etc.)
+    # Note: depends_on doesn't work with host network mode, so we wait for DB in startup script
+    network_mode: host
     environment:
-      # Database connection (will use postgres service)
-      REMOVARR_DB_HOST: postgres
+      # Database connection (use localhost since we're on host network)
+      # PostgreSQL port is mapped to 127.0.0.1:5432 in the postgres service
+      REMOVARR_DB_HOST: localhost
       REMOVARR_DB_PORT: 5432
       REMOVARR_DB_USER: ${POSTGRES_USER:-removarr}
       REMOVARR_DB_PASSWORD: ${POSTGRES_PASSWORD:-removarr}
@@ -52,8 +48,8 @@ services:
       # If not mounted, the app will auto-generate one from environment variables
       # - ./config.yaml:/app/config.yaml:ro
       - removarr-data:/app/data  # For persistent storage if needed
-    ports:
-      - "${REMOVARR_PORT:-31111}:31111"
+    # Using host network mode, so no port mapping needed
+    # The container will bind directly to the host's port 31111
     restart: unless-stopped
     command:
       - /bin/sh
@@ -66,7 +62,7 @@ services:
           host: 0.0.0.0
           port: 31111
         database:
-          host: postgres
+          host: localhost
           port: 5432
           user: removarr
           password: removarr
@@ -78,7 +74,7 @@ services:
         EOFCONFIG
         fi
         echo 'Waiting for database...'
-        until pg_isready -h postgres -U removarr -d removarr; do sleep 1; done
+        until pg_isready -h localhost -U removarr -d removarr; do sleep 1; done
         echo 'Running migrations...'
         ./migrate -config config.yaml -cmd up
         echo 'Starting Removarr...'
