@@ -31,9 +31,7 @@ func NewPlexClient(baseURL, token string) *PlexClient {
 	return &PlexClient{
 		baseURL: baseURL,
 		token:   token,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 

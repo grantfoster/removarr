@@ -55,9 +55,7 @@ func NewQBittorrentClient(baseURL, username, password string) *QBittorrentClient
 		baseURL:  baseURL,
 		username: username,
 		password: password,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 

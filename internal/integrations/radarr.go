@@ -36,9 +36,7 @@ func NewRadarrClient(baseURL, apiKey string) *RadarrClient {
 	return &RadarrClient{
 		baseURL: baseURL,
 		apiKey:  apiKey,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 

@@ -27,9 +27,7 @@ func NewProwlarrClient(baseURL, apiKey string) *ProwlarrClient {
 	return &ProwlarrClient{
 		baseURL: baseURL,
 		apiKey:  apiKey,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 

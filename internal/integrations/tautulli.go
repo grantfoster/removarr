@@ -35,9 +35,7 @@ func NewTautulliClient(baseURL, apiKey string) *TautulliClient {
 	return &TautulliClient{
 		baseURL: baseURL,
 		apiKey:  apiKey,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 

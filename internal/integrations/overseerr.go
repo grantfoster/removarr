@@ -48,9 +48,7 @@ func NewOverseerrClient(baseURL, apiKey string) *OverseerrClient {
 	return &OverseerrClient{
 		baseURL: baseURL,
 		apiKey:  apiKey,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 

@@ -34,9 +34,7 @@ func NewSonarrClient(baseURL, apiKey string) *SonarrClient {
 	return &SonarrClient{
 		baseURL: baseURL,
 		apiKey:  apiKey,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  newHTTPClient(30 * time.Second),
 	}
 }
 
