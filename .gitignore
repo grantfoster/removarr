@@ -1,10 +1,14 @@
-# Binaries
-removarr
+# Binaries (exclude root-level binary, but not cmd/removarr/ source)
+/removarr
+removarr.exe
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+# Make sure cmd/removarr/ source is tracked
+!cmd/removarr/
 
 # Test binary, built with `go test -c`
 *.test
