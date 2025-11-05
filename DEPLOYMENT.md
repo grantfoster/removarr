@@ -8,9 +8,111 @@ This guide helps you deploy Removarr to a seedbox without root access.
 2. **PostgreSQL access** - either:
    - Existing PostgreSQL database you can access
    - Or PostgreSQL on your seedbox (some providers offer this)
+   - Or use Docker/Podman Compose (includes PostgreSQL automatically)
 3. **Network access** to your *arr apps (Overseerr, Sonarr, Radarr, etc.)
 
-## Option 1: Quick Deploy (Pre-built Binary)
+## Option 1: Docker/Podman Compose (Easiest - Includes Database)
+
+**No database setup required!** Docker Compose includes PostgreSQL automatically.
+
+### Prerequisites
+
+- Docker or Podman with Compose support
+- Git (to clone the repo)
+
+### Step 1: Clone and Setup
+
+```bash
+# Clone repository
+git clone https://github.com/your-username/removarr.git
+cd removarr
+
+# Optional: Set environment variables for custom configuration
+export POSTGRES_PASSWORD=your_secure_password
+export SESSION_SECRET=your_session_secret
+export REMOVARR_PORT=8080
+```
+
+### Step 2: Start Services
+
+```bash
+# Using Docker Compose
+docker-compose up -d
+
+# Or using Podman Compose
+podman-compose up -d
+```
+
+That's it! The compose file will:
+- ✅ Start PostgreSQL automatically
+- ✅ Run database migrations automatically
+- ✅ Start Removarr and connect to the database
+- ✅ Create persistent volumes for data
+
+### Step 3: Access Removarr
+
+1. Open `http://your-seedbox-ip:8080` in your browser
+2. Complete the setup wizard (create admin account)
+3. Go to Settings and configure your integrations
+
+### Configuration
+
+The compose setup uses environment variables. You can:
+
+1. **Create a `.env` file** (recommended):
+```bash
+cat > .env << EOF
+POSTGRES_USER=removarr
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=removarr
+SESSION_SECRET=your_random_session_secret
+REMOVARR_PORT=8080
+EOF
+```
+
+2. **Or set environment variables** before running compose:
+```bash
+export POSTGRES_PASSWORD=your_password
+export SESSION_SECRET=your_secret
+docker-compose up -d
+```
+
+3. **Or mount a custom config.yaml** (uncomment the volume line in docker-compose.yml):
+```yaml
+volumes:
+  - ./config.yaml:/app/config.yaml:ro
+```
+
+### Useful Commands
+
+```bash
+# View logs
+docker-compose logs -f removarr
+
+# Stop services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# Update Removarr
+git pull
+docker-compose build removarr
+docker-compose up -d
+```
+
+### Data Persistence
+
+Data is stored in Docker volumes:
+- `removarr-postgres-data` - PostgreSQL database
+- `removarr-data` - Removarr application data
+
+To backup:
+```bash
+docker run --rm -v removarr-postgres-data:/data -v $(pwd):/backup alpine tar czf /backup/postgres-backup.tar.gz /data
+```
+
+## Option 2: Quick Deploy (Pre-built Binary)
 
 ### Step 1: Download Binary
 
@@ -109,7 +211,7 @@ go build -o removarr ./cmd/removarr
 go build -o migrate ./cmd/migrate
 ```
 
-### Step 2: Continue with Steps 2-6 from Option 1
+### Step 2: Continue with Steps 2-6 from Option 2
 
 ## Running as a Service (No Root)
 

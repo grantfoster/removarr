@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: removarr-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-removarr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-removarr}
+      POSTGRES_DB: ${POSTGRES_DB:-removarr}
+    volumes:
+      - removarr-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-127.0.0.1:5432}:5432"  # Bind to localhost by default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-removarr}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  removarr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: removarr
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database connection (will use postgres service)
+      REMOVARR_DB_HOST: postgres
+      REMOVARR_DB_PORT: 5432
+      REMOVARR_DB_USER: ${POSTGRES_USER:-removarr}
+      REMOVARR_DB_PASSWORD: ${POSTGRES_PASSWORD:-removarr}
+      REMOVARR_DB_DATABASE: ${POSTGRES_DB:-removarr}
+      REMOVARR_DB_SSLMODE: disable
+      
+      # Session secret (generate a random one if not provided)
+      REMOVARR_SESSION_SECRET: ${SESSION_SECRET:-}
+      
+      # Server settings (optional overrides)
+      REMOVARR_HOST: ${REMOVARR_HOST:-0.0.0.0}
+      REMOVARR_PORT: ${REMOVARR_PORT:-8080}
+    volumes:
+      # Optional: Mount config.yaml if you want to customize server/database settings
+      # If not mounted, the app will auto-generate one from environment variables
+      # - ./config.yaml:/app/config.yaml:ro
+      - removarr-data:/app/data  # For persistent storage if needed
+    ports:
+      - "${REMOVARR_PORT:-8080}:8080"
+    restart: unless-stopped
+    command: >
+      sh -c "
+        # Generate minimal config.yaml if it doesn't exist (from env vars)
+        if [ ! -f config.yaml ]; then
+          echo 'Creating config.yaml from environment variables...'
+          cat > config.yaml << EOF
+        server:
+          host: 0.0.0.0
+          port: 31111
+        database:
+          host: postgres
+          port: 5432
+          user: ${POSTGRES_USER:-removarr}
+          password: ${POSTGRES_PASSWORD:-removarr}
+          database: ${POSTGRES_DB:-removarr}
+          ssl_mode: disable
+        logging:
+          level: info
+          format: json
+        EOF
+        fi &&
+        echo 'Waiting for database...' &&
+        until pg_isready -h postgres -U ${POSTGRES_USER:-removarr} -d ${POSTGRES_DB:-removarr}; do sleep 1; done &&
+        echo 'Running migrations...' &&
+        ./migrate -config config.yaml -cmd up &&
+        echo 'Starting Removarr...' &&
+        ./removarr -config config.yaml
+      "
+
+volumes:
+  removarr-postgres-data:
+    driver: local
+  removarr-data:
+    driver: local
+

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -112,9 +113,26 @@ func Load(path string) (*Config, error) {
 }
 
 func (c *Config) loadFromEnv() {
-	// Database password
+	// Database settings (from environment, useful for Docker)
+	if host := os.Getenv("REMOVARR_DB_HOST"); host != "" {
+		c.Database.Host = host
+	}
+	if portStr := os.Getenv("REMOVARR_DB_PORT"); portStr != "" {
+		if port, err := parseInt(portStr); err == nil {
+			c.Database.Port = port
+		}
+	}
+	if user := os.Getenv("REMOVARR_DB_USER"); user != "" {
+		c.Database.User = user
+	}
 	if c.Database.Password == "" {
 		c.Database.Password = os.Getenv("REMOVARR_DB_PASSWORD")
+	}
+	if database := os.Getenv("REMOVARR_DB_DATABASE"); database != "" {
+		c.Database.Database = database
+	}
+	if sslMode := os.Getenv("REMOVARR_DB_SSLMODE"); sslMode != "" {
+		c.Database.SSLMode = sslMode
 	}
 
 	// Session secret
@@ -186,6 +204,11 @@ func (c *Config) setDefaults() {
 	if c.Logging.Format == "" {
 		c.Logging.Format = "json"
 	}
+}
+
+// parseInt parses a string to an integer, returns 0 on error
+func parseInt(s string) (int, error) {
+	return strconv.Atoi(s)
 }
 
 func Default() *Config {
