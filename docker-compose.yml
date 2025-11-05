@@ -41,14 +41,14 @@ services:
       
       # Server settings (optional overrides)
       REMOVARR_HOST: ${REMOVARR_HOST:-0.0.0.0}
-      REMOVARR_PORT: ${REMOVARR_PORT:-8080}
+      REMOVARR_PORT: ${REMOVARR_PORT:-31111}
     volumes:
       # Optional: Mount config.yaml if you want to customize server/database settings
       # If not mounted, the app will auto-generate one from environment variables
       # - ./config.yaml:/app/config.yaml:ro
       - removarr-data:/app/data  # For persistent storage if needed
     ports:
-      - "${REMOVARR_PORT:-8080}:8080"
+      - "${REMOVARR_PORT:-31111}:31111"
     restart: unless-stopped
     command: >
       sh -c "
@@ -58,7 +58,7 @@ services:
           cat > config.yaml << EOF
         server:
           host: 0.0.0.0
-          port: 31111
+          port: ${REMOVARR_PORT:-31111}
         database:
           host: postgres
           port: 5432
