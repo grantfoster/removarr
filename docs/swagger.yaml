@@ -1,0 +1,137 @@
+basePath: /api
+host: localhost:8080
+info:
+  contact:
+    name: API Support
+    url: http://www.example.com/support
+  description: API for managing seedbox media deletion
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Removarr API
+  version: "1.0"
+paths:
+  /admin/users:
+    get:
+      description: Get a list of all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List users
+      tags:
+      - admin
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and create session
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Logout and destroy session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      summary: Logout
+      tags:
+      - auth
+  /media:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all media items with optional filters
+      parameters:
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by type (movie/series)
+        in: query
+        name: type
+        type: string
+      - description: Sync from Sonarr/Radarr before listing
+        in: query
+        name: sync
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List media items
+      tags:
+      - media
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"

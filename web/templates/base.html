@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ block "title" . }}removarr{{ end }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* HTMX Loading Indicators */
+        .htmx-indicator {
+            display: none;
+        }
+        .htmx-request .htmx-indicator {
+            display: inline-block;
+        }
+        .htmx-request.htmx-indicator {
+            display: inline-block;
+        }
+        
+        /* Hide sync icon when loading, show spinner */
+        button.htmx-request #sync-icon-static {
+            display: none !important;
+        }
+        button.htmx-request #sync-spinner {
+            display: inline-block !important;
+        }
+        
+        /* Circular checkbox for dark theme */
+        .media-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4b5563; /* gray-600 */
+            border-radius: 50%;
+            background-color: #1f2937; /* gray-800 */
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .media-checkbox:hover {
+            border-color: #6b7280; /* gray-500 */
+            background-color: #374151; /* gray-700 */
+        }
+        
+        .media-checkbox:checked {
+            border-color: #6366f1; /* indigo-500 */
+            background-color: #6366f1; /* indigo-500 */
+        }
+        
+        .media-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ffffff;
+        }
+        
+        .media-checkbox:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #1f2937, 0 0 0 4px #6366f1;
+        }
+    </style>
+    {{ block "extra_head" . }}{{ end }}
+</head>
+<body class="bg-gray-900 min-h-screen">
+    <nav class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-6 h-6 text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <a href="/" class="text-2xl font-bold text-gray-100">removarr</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {{ if .User }}
+                    <a href="/dashboard" class="text-sm text-gray-400 hover:text-gray-200">dashboard</a>
+                    {{ if .User.IsAdmin }}
+                    <a href="/admin" class="text-sm text-gray-400 hover:text-gray-200">admin</a>
+                    {{ end }}
+                    <span class="text-sm text-gray-300">{{ .User.Username }}</span>
+                    <a href="/logout" class="text-sm text-gray-400 hover:text-gray-200">logout</a>
+                    {{ else }}
+                    <a href="/login" class="text-sm text-gray-400 hover:text-gray-200">Login</a>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {{ block "content" . }}{{ end }}
+    </main>
+
+    {{ block "scripts" . }}{{ end }}
+</body>
+</html>

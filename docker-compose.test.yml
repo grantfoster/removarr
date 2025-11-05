@@ -1,0 +1,123 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: removarr-test-db
+    environment:
+      POSTGRES_USER: removarr
+      POSTGRES_PASSWORD: removarr
+      POSTGRES_DB: removarr
+    ports:
+      - "5433:5432"  # Use 5433 to avoid conflict with host PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U removarr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: removarr-test-sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    ports:
+      - "8989:8989"
+    volumes:
+      - sonarr_config:/config
+      - ./test-data/media/tv:/tv
+      - ./test-data/media:/media
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: removarr-test-radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    ports:
+      - "7878:7878"
+    volumes:
+      - radarr_config:/config
+      - ./test-data/media/movies:/movies
+      - ./test-data/media:/media
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: removarr-test-prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    ports:
+      - "9696:9696"
+    volumes:
+      - prowlarr_config:/config
+    restart: unless-stopped
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: removarr-test-overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    ports:
+      - "5055:5055"
+    volumes:
+      - overseerr_config:/config
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: removarr-test-qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - WEBUI_PORT=8080
+      # Note: qBittorrent defaults to admin/adminadmin
+      # We'll configure it to admin/admin via script
+    ports:
+      - "8081:8080"  # Using 8081 to avoid conflict with removarr
+    volumes:
+      - qbittorrent_config:/config
+      - ./test-data/media/downloads:/downloads
+      - ./test-data/media/complete:/complete
+      - ./test-data/media:/media
+    restart: unless-stopped
+
+  # Optional: Plex for testing (if you want to test Plex auth)
+  # plex:
+  #   image: lscr.io/linuxserver/plex:latest
+  #   container_name: removarr-test-plex
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=America/New_York
+  #     - VERSION=docker
+  #   ports:
+  #     - "32400:32400"
+  #   volumes:
+  #     - plex_config:/config
+  #     - ./test-data/media:/media
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+    # Persistent - API keys and configs stored here
+  sonarr_config:
+    # Persistent - API keys stored here
+  radarr_config:
+    # Persistent - API keys stored here
+  prowlarr_config:
+    # Persistent - API keys stored here
+  overseerr_config:
+    # Persistent - API keys stored here
+  qbittorrent_config:
+    # Persistent - Config stored here
+

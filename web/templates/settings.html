@@ -1,0 +1,741 @@
+{{ define "title" }}Settings - removarr{{ end }}
+
+{{ define "settings_content" }}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-100 flex items-center">
+            <svg class="w-8 h-8 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Settings
+        </h1>
+        <a href="/admin" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Admin
+        </a>
+    </div>
+
+    <p class="text-gray-400">Configure your *arr app integrations. Each integration can be saved independently.</p>
+
+    <div class="grid grid-cols-1 gap-6">
+        <!-- Sync Frequency Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
+            <form id="sync-frequency-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Auto Sync Frequency
+                    </h3>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Sync Interval</label>
+                    <input type="text" name="sync_frequency" id="sync-frequency-input" value="{{ .Settings.SyncFrequency }}"
+                           placeholder="5m"
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateSyncFrequency()">
+                    <p class="text-xs text-gray-500 mt-1">Duration format: 5m (5 minutes), 1h (1 hour), 30s (30 seconds), etc. Default: 5m</p>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+                <button type="button" onclick="saveSyncFrequency()"
+                        class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Save Sync Frequency
+                </button>
+            </form>
+        </div>
+        <!-- Overseerr Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6" data-service="overseerr">
+            <form id="overseerr-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Overseerr
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" {{ if .Config.Overseerr.Enabled }}checked{{ end }}
+                                   class="rounded border-gray-600 bg-gray-700" onchange="validateForm('overseerr')">
+                            <span class="ml-2 text-sm text-gray-300">Enabled</span>
+                        </label>
+                        <button type="button" onclick="testIntegration('overseerr')" class="test-btn px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="test-text">Test</span>
+                        </button>
+                        <span class="test-status hidden text-sm"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
+                    <input type="text" name="url" value="{{ .Config.Overseerr.URL }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('overseerr')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                    <div class="relative">
+                        <input type="password" name="api_key" id="overseerr.api_key" value="{{ .Config.Overseerr.APIKey }}"
+                               placeholder="Leave empty to keep current value"
+                               class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 pr-10 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               onblur="validateForm('overseerr')">
+                        <button type="button" onclick="togglePassword('overseerr.api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300">
+                            <svg id="overseerr.api_key-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg id="overseerr.api_key-eye-slash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to keep current value</p>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveIntegration('overseerr')" id="overseerr-save-btn" disabled
+                            class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+            </form>
+        </div>
+
+        <!-- Sonarr Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6" data-service="sonarr">
+            <form id="sonarr-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Sonarr
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" {{ if .Config.Sonarr.Enabled }}checked{{ end }}
+                                   class="rounded border-gray-600 bg-gray-700" onchange="validateForm('sonarr')">
+                            <span class="ml-2 text-sm text-gray-300">Enabled</span>
+                        </label>
+                        <button type="button" onclick="testIntegration('sonarr')" class="test-btn px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="test-text">Test</span>
+                        </button>
+                        <span class="test-status hidden text-sm"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
+                    <input type="text" name="url" value="{{ .Config.Sonarr.URL }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('sonarr')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                    <div class="relative">
+                        <input type="password" name="api_key" id="sonarr.api_key" value="{{ .Config.Sonarr.APIKey }}"
+                               placeholder="Leave empty to keep current value"
+                               class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 pr-10 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               onblur="validateForm('sonarr')">
+                        <button type="button" onclick="togglePassword('sonarr.api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300">
+                            <svg id="sonarr.api_key-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg id="sonarr.api_key-eye-slash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to keep current value</p>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveIntegration('sonarr')" id="sonarr-save-btn" disabled
+                            class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+            </form>
+        </div>
+
+        <!-- Radarr Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6" data-service="radarr">
+            <form id="radarr-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Radarr
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" {{ if .Config.Radarr.Enabled }}checked{{ end }}
+                                   class="rounded border-gray-600 bg-gray-700" onchange="validateForm('radarr')">
+                            <span class="ml-2 text-sm text-gray-300">Enabled</span>
+                        </label>
+                        <button type="button" onclick="testIntegration('radarr')" class="test-btn px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="test-text">Test</span>
+                        </button>
+                        <span class="test-status hidden text-sm"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
+                    <input type="text" name="url" value="{{ .Config.Radarr.URL }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('radarr')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                    <div class="relative">
+                        <input type="password" name="api_key" id="radarr.api_key" value="{{ .Config.Radarr.APIKey }}"
+                               placeholder="Leave empty to keep current value"
+                               class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 pr-10 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               onblur="validateForm('radarr')">
+                        <button type="button" onclick="togglePassword('radarr.api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300">
+                            <svg id="radarr.api_key-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg id="radarr.api_key-eye-slash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to keep current value</p>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveIntegration('radarr')" id="radarr-save-btn" disabled
+                            class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+            </form>
+        </div>
+
+        <!-- Prowlarr Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6" data-service="prowlarr">
+            <form id="prowlarr-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Prowlarr
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" {{ if .Config.Prowlarr.Enabled }}checked{{ end }}
+                                   class="rounded border-gray-600 bg-gray-700" onchange="validateForm('prowlarr')">
+                            <span class="ml-2 text-sm text-gray-300">Enabled</span>
+                        </label>
+                        <button type="button" onclick="testIntegration('prowlarr')" class="test-btn px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="test-text">Test</span>
+                        </button>
+                        <span class="test-status hidden text-sm"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
+                    <input type="text" name="url" value="{{ .Config.Prowlarr.URL }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('prowlarr')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                    <div class="relative">
+                        <input type="password" name="api_key" id="prowlarr.api_key" value="{{ .Config.Prowlarr.APIKey }}"
+                               placeholder="Leave empty to keep current value"
+                               class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 pr-10 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               onblur="validateForm('prowlarr')">
+                        <button type="button" onclick="togglePassword('prowlarr.api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300">
+                            <svg id="prowlarr.api_key-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg id="prowlarr.api_key-eye-slash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to keep current value</p>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveIntegration('prowlarr')" id="prowlarr-save-btn" disabled
+                            class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+            </form>
+        </div>
+
+        <!-- qBittorrent Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6" data-service="qbittorrent">
+            <form id="qbittorrent-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        qBittorrent
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" {{ if .Config.QBittorrent.Enabled }}checked{{ end }}
+                                   class="rounded border-gray-600 bg-gray-700" onchange="validateForm('qbittorrent')">
+                            <span class="ml-2 text-sm text-gray-300">Enabled</span>
+                        </label>
+                        <button type="button" onclick="testIntegration('qbittorrent')" class="test-btn px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="test-text">Test</span>
+                        </button>
+                        <span class="test-status hidden text-sm"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
+                    <input type="text" name="url" value="{{ .Config.QBittorrent.URL }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('qbittorrent')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                    <input type="text" name="username" value="{{ .Config.QBittorrent.Username }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('qbittorrent')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" name="password" id="qbittorrent.password" value=""
+                               placeholder="Leave empty to keep current value"
+                               class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 pr-10 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               onblur="validateForm('qbittorrent')">
+                        <button type="button" onclick="togglePassword('qbittorrent.password')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300">
+                            <svg id="qbittorrent.password-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg id="qbittorrent.password-eye-slash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to keep current value</p>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveIntegration('qbittorrent')" id="qbittorrent-save-btn" disabled
+                            class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+            </form>
+        </div>
+
+        <!-- Tautulli Card -->
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6" data-service="tautulli">
+            <form id="tautulli-form" class="space-y-4" onsubmit="return false;">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-100 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        Tautulli
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" {{ if .Config.Tautulli.Enabled }}checked{{ end }}
+                                   class="rounded border-gray-600 bg-gray-700" onchange="validateForm('tautulli')">
+                            <span class="ml-2 text-sm text-gray-300">Enabled</span>
+                        </label>
+                        <button type="button" onclick="testIntegration('tautulli')" class="test-btn px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="test-text">Test</span>
+                        </button>
+                        <span class="test-status hidden text-sm"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
+                    <input type="text" name="url" value="{{ .Config.Tautulli.URL }}" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           onblur="validateForm('tautulli')">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                    <div class="relative">
+                        <input type="password" name="api_key" id="tautulli.api_key" value="{{ .Config.Tautulli.APIKey }}"
+                               placeholder="Leave empty to keep current value"
+                               class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 pr-10 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               onblur="validateForm('tautulli')">
+                        <button type="button" onclick="togglePassword('tautulli.api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300">
+                            <svg id="tautulli.api_key-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg id="tautulli.api_key-eye-slash" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to keep current value</p>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveIntegration('tautulli')" id="tautulli-save-btn" disabled
+                            class="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save
+                    </button>
+                </div>
+                <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "content" }}
+{{ template "settings_content" . }}
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+// Track test results per integration
+const testResults = {};
+
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const eyeIcon = document.getElementById(fieldId + '-eye');
+    const eyeSlashIcon = document.getElementById(fieldId + '-eye-slash');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        eyeIcon.classList.add('hidden');
+        eyeSlashIcon.classList.remove('hidden');
+    } else {
+        field.type = 'password';
+        eyeIcon.classList.remove('hidden');
+        eyeSlashIcon.classList.add('hidden');
+    }
+}
+
+function validateForm(service) {
+    const form = document.getElementById(`${service}-form`);
+    const formData = new FormData(form);
+    const enabled = formData.get('enabled') === 'on';
+    const url = formData.get('url') || '';
+    const apiKey = formData.get('api_key') || '';
+    const username = formData.get('username') || '';
+    const password = formData.get('password') || '';
+    
+    let isValid = true;
+    
+    // If enabled, validate required fields
+    if (enabled) {
+        // URL is always required
+        const urlInput = form.querySelector('input[name="url"]');
+        const trimmedUrl = url.trim();
+        if (!trimmedUrl) {
+            urlInput.classList.add('border-red-500');
+            urlInput.classList.remove('border-gray-600');
+            isValid = false;
+        } else if (trimmedUrl.endsWith('/')) {
+            urlInput.classList.add('border-red-500');
+            urlInput.classList.remove('border-gray-600');
+            isValid = false;
+            // Show error message
+            const messageDiv = form.querySelector('.integration-message');
+            if (messageDiv) {
+                messageDiv.classList.remove('hidden');
+                messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-red-900 bg-opacity-50 border border-red-700 text-red-300';
+                messageDiv.textContent = 'URL should not end with a slash';
+            }
+        } else {
+            urlInput.classList.remove('border-red-500');
+            urlInput.classList.add('border-gray-600');
+            // Clear error message if URL is valid
+            const messageDiv = form.querySelector('.integration-message');
+            if (messageDiv && messageDiv.textContent === 'URL should not end with a slash') {
+                messageDiv.classList.add('hidden');
+            }
+        }
+        
+        // For services that need API key (except qBittorrent)
+        if (service !== 'qbittorrent') {
+            // API key is required if service is enabled (but can be empty if keeping current)
+            // We'll check if it's empty AND there's no existing value
+            // For now, we'll just require it if enabled
+            const apiKeyInput = form.querySelector('input[name="api_key"]');
+            // Note: API key can be empty if keeping current, so we don't validate it strictly
+        }
+        
+        // For qBittorrent, username is required
+        if (service === 'qbittorrent') {
+            const usernameInput = form.querySelector('input[name="username"]');
+            if (!username || username.trim() === '') {
+                usernameInput.classList.add('border-red-500');
+                usernameInput.classList.remove('border-gray-600');
+                isValid = false;
+            } else {
+                usernameInput.classList.remove('border-red-500');
+                usernameInput.classList.add('border-gray-600');
+            }
+        }
+    }
+    
+    // Update save button
+    const saveBtn = document.getElementById(`${service}-save-btn`);
+    if (isValid) {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+        saveBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'cursor-pointer');
+    } else {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+        saveBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'cursor-pointer');
+    }
+    
+    return isValid;
+}
+
+async function testIntegration(service) {
+    const serviceDiv = document.querySelector(`[data-service="${service}"]`);
+    const form = document.getElementById(`${service}-form`);
+    const formData = new FormData(form);
+    const testBtn = serviceDiv.querySelector('.test-btn');
+    const testStatus = serviceDiv.querySelector('.test-status');
+    const testText = testBtn.querySelector('.test-text');
+    
+    const data = {
+        service: service,
+        url: formData.get('url') || '',
+        api_key: formData.get('api_key') || '',
+        username: formData.get('username') || '',
+        password: formData.get('password') || ''
+    };
+    
+    // Validate before testing
+    if (!data.url || data.url.trim() === '') {
+        const urlInput = form.querySelector('input[name="url"]');
+        urlInput.classList.add('border-red-500');
+        urlInput.classList.remove('border-gray-600');
+        testStatus.classList.remove('hidden');
+        testStatus.textContent = '✗ URL is required';
+        testStatus.className = 'test-status text-sm text-red-600';
+        validateForm(service);
+        return;
+    }
+    
+    // Disable button and show loading
+    testBtn.disabled = true;
+    testText.textContent = 'Testing...';
+    
+    try {
+        const response = await fetch('/api/admin/settings/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        testResults[service] = result.success;
+        
+        if (result.success) {
+            testStatus.classList.remove('hidden');
+            testStatus.textContent = '✓';
+            testStatus.className = 'test-status text-sm text-green-600 font-semibold';
+        } else {
+            testStatus.classList.remove('hidden');
+            testStatus.textContent = '✗ ' + result.message;
+            testStatus.className = 'test-status text-sm text-red-600';
+        }
+        
+        validateForm(service);
+    } catch (error) {
+        testResults[service] = false;
+        testStatus.classList.remove('hidden');
+        testStatus.textContent = '✗ Connection failed';
+        testStatus.className = 'test-status text-sm text-red-600';
+        validateForm(service);
+    } finally {
+        testBtn.disabled = false;
+        testText.textContent = 'Test';
+    }
+}
+
+async function saveIntegration(service) {
+    const form = document.getElementById(`${service}-form`);
+    const formData = new FormData(form);
+    const messageDiv = form.querySelector('.integration-message');
+    
+    // Validate before saving
+    if (!validateForm(service)) {
+        messageDiv.classList.remove('hidden');
+        messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-red-900 bg-opacity-50 border border-red-700 text-red-300';
+        messageDiv.textContent = 'Please fix validation errors before saving';
+        setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+        return;
+    }
+    
+    const enabled = formData.get('enabled') === 'on';
+    let url = formData.get('url') || '';
+    // Strip trailing slash
+    url = url.trim().replace(/\/+$/, '');
+    const settings = {
+        [service]: {
+            enabled: enabled,
+            url: url,
+            api_key: formData.get('api_key') || '',
+            username: formData.get('username') || '',
+            password: formData.get('password') || ''
+        }
+    };
+    
+    // Remove empty password/api_key (means keep current)
+    if (settings[service].password === '') {
+        delete settings[service].password;
+    }
+    if (settings[service].api_key === '') {
+        delete settings[service].api_key;
+    }
+    
+    const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+    });
+    
+    const data = await response.json();
+        messageDiv.classList.remove('hidden');
+    
+    if (data.success) {
+        messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-green-900 bg-opacity-50 border border-green-700 text-green-300';
+        messageDiv.textContent = data.message || 'Settings saved successfully!';
+    } else {
+        messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-red-900 bg-opacity-50 border border-red-700 text-red-300';
+        messageDiv.textContent = 'Failed to save settings';
+    }
+    
+    setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+}
+
+// Validate all forms on page load
+document.addEventListener('DOMContentLoaded', function() {
+    ['overseerr', 'sonarr', 'radarr', 'prowlarr', 'qbittorrent', 'tautulli'].forEach(service => {
+        validateForm(service);
+    });
+    validateSyncFrequency();
+});
+
+function validateSyncFrequency() {
+    const input = document.getElementById('sync-frequency-input');
+    const value = input.value.trim();
+    const messageDiv = document.querySelector('#sync-frequency-form .integration-message');
+    
+    // Validate duration format
+    if (value === '') {
+        input.classList.remove('border-red-500');
+        input.classList.add('border-gray-600');
+        return true; // Empty is okay (uses default)
+    }
+    
+    // Try to parse as duration
+    const durationRegex = /^(\d+)(ns|us|µs|ms|s|m|h)$/;
+    if (!durationRegex.test(value)) {
+        input.classList.add('border-red-500');
+        input.classList.remove('border-gray-600');
+        if (messageDiv) {
+            messageDiv.classList.remove('hidden');
+            messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-red-900 bg-opacity-50 border border-red-700 text-red-300';
+            messageDiv.textContent = 'Invalid format. Use duration like: 5m, 1h, 30s';
+        }
+        return false;
+    }
+    
+    input.classList.remove('border-red-500');
+    input.classList.add('border-gray-600');
+    if (messageDiv) {
+        messageDiv.classList.add('hidden');
+    }
+    return true;
+}
+
+async function saveSyncFrequency() {
+    const form = document.getElementById('sync-frequency-form');
+    const input = document.getElementById('sync-frequency-input');
+    const messageDiv = form.querySelector('.integration-message');
+    const value = input.value.trim();
+    
+    if (!validateSyncFrequency()) {
+        messageDiv.classList.remove('hidden');
+        messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-red-900 bg-opacity-50 border border-red-700 text-red-300';
+        messageDiv.textContent = 'Please fix validation errors before saving';
+        return;
+    }
+    
+    const settings = {
+        sync_frequency: value || '5m'
+    };
+    
+    const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+    });
+    
+    const data = await response.json();
+    messageDiv.classList.remove('hidden');
+    
+    if (data.success) {
+        messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-green-900 bg-opacity-50 border border-green-700 text-green-300';
+        messageDiv.textContent = data.message || 'Sync frequency saved successfully!';
+    } else {
+        messageDiv.className = 'integration-message mt-2 p-3 rounded text-sm bg-red-900 bg-opacity-50 border border-red-700 text-red-300';
+        messageDiv.textContent = data.message || 'Failed to save sync frequency';
+    }
+    
+    setTimeout(() => messageDiv.classList.add('hidden'), 5000);
+}
+</script>
+{{ end }}

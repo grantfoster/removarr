@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS tautulli_history;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS seeding_overrides;
+DROP TABLE IF EXISTS torrents;
+DROP TABLE IF EXISTS media_items;
+DROP TABLE IF EXISTS users;
+

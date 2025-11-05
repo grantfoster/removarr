@@ -1,0 +1,108 @@
+{{ define "title" }}Setup - removarr{{ end }}
+
+{{ define "setup_content" }}
+<div class="max-w-2xl mx-auto mt-16">
+    <div class="bg-gray-800 shadow-lg rounded-lg p-8 border border-gray-700">
+        <h1 class="text-3xl font-bold text-gray-100 mb-6">Welcome to removarr</h1>
+        <p class="text-gray-400 mb-8">Let's set up your first admin account to get started.</p>
+
+        <form id="setup-form" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                <input type="text" id="username" name="username" required
+                       class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email (Optional)</label>
+                <input type="email" id="email" name="email"
+                       class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                <input type="password" id="password" name="password" required
+                       class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label for="password_confirm" class="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
+                <input type="password" id="password_confirm" name="password_confirm" required
+                       class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div id="error-message" class="hidden bg-red-900 bg-opacity-50 border border-red-700 text-red-300 px-4 py-3 rounded"></div>
+            <div id="success-message" class="hidden bg-green-900 bg-opacity-50 border border-green-700 text-green-300 px-4 py-3 rounded"></div>
+
+            <button type="submit"
+                    class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500">
+                Create Admin Account
+            </button>
+        </form>
+    </div>
+</div>
+{{ end }}
+
+{{ define "content" }}
+{{ template "setup_content" . }}
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+document.getElementById('setup-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirm').value;
+    
+    if (password !== passwordConfirm) {
+        showError('Passwords do not match');
+        return;
+    }
+    
+    const formData = {
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        password: password
+    };
+    
+    try {
+        const response = await fetch('/setup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showSuccess('Admin account created! Redirecting to login...');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        } else {
+            showError(data.message || 'Failed to create account');
+        }
+    } catch (error) {
+        showError('An error occurred. Please try again.');
+    }
+});
+
+function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
+    document.getElementById('success-message').classList.add('hidden');
+}
+
+function showSuccess(message) {
+    const successDiv = document.getElementById('success-message');
+    successDiv.textContent = message;
+    successDiv.classList.remove('hidden');
+    document.getElementById('error-message').classList.add('hidden');
+}
+</script>
+{{ end }}
+

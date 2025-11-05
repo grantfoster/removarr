@@ -1,0 +1,43 @@
+{{ define "title" }}Login - removarr{{ end }}
+
+{{ define "login_content" }}
+<div class="max-w-md mx-auto mt-16">
+    <div class="bg-gray-800 shadow-lg rounded-lg p-8 border border-gray-700">
+        <h1 class="text-2xl font-bold text-gray-100 mb-6">Login</h1>
+        
+        <form hx-post="/api/auth/login" 
+              hx-ext="json-enc"
+              hx-boost="false"
+              class="space-y-4">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                <input type="text" 
+                       id="username" 
+                       name="username" 
+                       required
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                <input type="password" 
+                       id="password" 
+                       name="password" 
+                       required
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div id="error-message" class="text-red-400 text-sm hidden"></div>
+
+            <button type="submit" 
+                    class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500">
+                Login
+            </button>
+        </form>
+    </div>
+</div>
+{{ end }}
+
+{{ define "content" }}
+{{ template "login_content" . }}
+{{ end }}

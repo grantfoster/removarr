@@ -1,0 +1,331 @@
+{{ define "title" }}Dashboard - removarr{{ end }}
+
+{{ define "dashboard_content" }}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-100">Media Dashboard</h1>
+        <div class="flex space-x-2">
+            <button id="bulk-delete-btn" onclick="bulkDelete()" disabled
+                    class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                Delete Selected (<span id="selected-count">0</span>)
+            </button>
+            <button hx-post="/api/media/sync"
+                    hx-target="#media-list"
+                    hx-swap="innerHTML"
+                    hx-indicator="#sync-spinner"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg id="sync-icon-static" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span id="sync-spinner" class="htmx-indicator">
+                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+                <span id="sync-text">Sync Media</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4">
+        <div class="flex flex-wrap gap-4 items-center">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Type</label>
+                <select hx-get="/dashboard"
+                        hx-target="#media-list"
+                        hx-include="[name='type'], [name='eligible'], [name='downloaded']"
+                        name="type"
+                        class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="" {{ if not .Type }}selected{{ end }}>All</option>
+                    <option value="movie" {{ if eq .Type "movie" }}selected{{ end }}>Movies</option>
+                    <option value="series" {{ if eq .Type "series" }}selected{{ end }}>Series</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Eligibility</label>
+                <select hx-get="/dashboard"
+                        hx-target="#media-list"
+                        hx-include="[name='type'], [name='eligible'], [name='downloaded']"
+                        name="eligible"
+                        class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All</option>
+                    <option value="true">Eligible Only</option>
+                    <option value="false">Not Eligible</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Downloaded</label>
+                <select hx-get="/dashboard"
+                        hx-target="#media-list"
+                        hx-include="[name='type'], [name='eligible'], [name='downloaded']"
+                        name="downloaded"
+                        class="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All</option>
+                    <option value="true">Downloaded</option>
+                    <option value="false">Not Downloaded</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Last Refreshed Indicator -->
+    {{ if .LastSyncTime }}
+    <div class="bg-gray-800 rounded-lg border border-gray-700 px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span class="text-sm text-gray-400">Last refreshed: <span class="text-gray-300">{{ .LastSyncTime }}</span></span>
+        </div>
+    </div>
+    {{ end }}
+
+    <!-- Media List -->
+    <div id="media-list">
+        {{ template "media_list" . }}
+    </div>
+</div>
+{{ end }}
+
+{{ define "content" }}
+{{ template "dashboard_content" . }}
+{{ end }}
+
+{{ define "scripts" }}
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 border border-gray-700">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-100 mb-4">Confirm Deletion</h3>
+            <p class="text-gray-300 mb-2">
+                Are you sure you want to delete <strong id="delete-title" class="text-gray-100"></strong>?
+            </p>
+            <div id="delete-warning" class="hidden"></div>
+            <p class="text-xs text-gray-500 mb-4">
+                <span class="block mb-1">This will:</span>
+                <ul class="list-disc list-inside text-xs leading-tight space-y-0 text-gray-500">
+                    <li>Delete files from the filesystem</li>
+                    <li>Remove/unmonitor from Sonarr/Radarr</li>
+                    <li>Delete the request from Overseerr</li>
+                    <li>Delete torrents from qBittorrent</li>
+                </ul>
+            </p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="hideDeleteModal()"
+                        class="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button id="confirm-delete-btn"
+                        class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div id="bulk-delete-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center">
+    <div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 border border-gray-700 max-h-[80vh] overflow-hidden flex flex-col">
+        <div class="p-6 flex-1 overflow-y-auto">
+            <h3 class="text-lg font-semibold text-gray-100 mb-4">Confirm Bulk Deletion</h3>
+            <p class="text-gray-300 mb-4">
+                Are you sure you want to delete <strong id="bulk-delete-count" class="text-gray-100">0</strong> media item(s)?
+            </p>
+            <div class="bg-gray-700 rounded-lg p-4 mb-4 max-h-64 overflow-y-auto">
+                <p class="text-xs font-medium text-gray-400 mb-2">Items to be deleted:</p>
+                <ul id="bulk-delete-titles" class="space-y-1">
+                    <!-- Titles will be populated by JavaScript -->
+                </ul>
+            </div>
+            <p class="text-xs text-gray-500 mb-4">
+                <span class="block mb-1">This will:</span>
+                <ul class="list-disc list-inside text-xs leading-tight space-y-0 text-gray-500">
+                    <li>Delete files from the filesystem</li>
+                    <li>Remove/unmonitor from Sonarr/Radarr</li>
+                    <li>Delete the request from Overseerr</li>
+                    <li>Delete torrents from qBittorrent</li>
+                </ul>
+            </p>
+        </div>
+        <div class="flex justify-end space-x-3 p-6 border-t border-gray-700">
+            <button onclick="hideBulkDeleteModal()"
+                    class="px-4 py-2 text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600">
+                Cancel
+            </button>
+            <button id="confirm-bulk-delete-btn"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                Delete All
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentDeleteId = null;
+
+function showDeleteModal(id, title, type, notEligible) {
+    currentDeleteId = id;
+    document.getElementById('delete-title').textContent = title;
+    
+    // Add warning if not eligible
+    const warningDiv = document.getElementById('delete-warning');
+    if (notEligible) {
+        warningDiv.classList.remove('hidden');
+        warningDiv.innerHTML = '<div class="bg-yellow-900 bg-opacity-50 border-l-4 border-yellow-500 p-4 mb-4"><div class="flex"><div class="ml-3"><p class="text-sm text-yellow-300">⚠️ This media is not eligible for deletion (seeding requirements not met). Deleting anyway may violate tracker rules.</p></div></div></div>';
+    } else {
+        warningDiv.classList.add('hidden');
+    }
+    
+    document.getElementById('delete-modal').classList.remove('hidden');
+    
+    // Set up the confirm button
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    confirmBtn.onclick = function() {
+        // Delete the media item
+        fetch(`/api/media/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'HX-Request': 'true'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Remove the element from the page
+                const element = document.querySelector(`[data-media-id="${id}"]`);
+                if (element) {
+                    element.remove();
+                }
+                // Refresh the media list
+                htmx.ajax('GET', '/dashboard', {target: '#media-list', swap: 'innerHTML'});
+            }
+            hideDeleteModal();
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            alert('Failed to delete media item. Please try again.');
+            hideDeleteModal();
+        });
+    };
+}
+
+function hideDeleteModal() {
+    document.getElementById('delete-modal').classList.add('hidden');
+    currentDeleteId = null;
+}
+
+    // Close modal on background click
+    document.getElementById('delete-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideDeleteModal();
+        }
+    });
+
+    // Bulk Delete Modal
+    let currentBulkDeleteIds = [];
+    let currentBulkDeleteTitles = [];
+
+    function showBulkDeleteModal(ids, titles) {
+        currentBulkDeleteIds = ids;
+        currentBulkDeleteTitles = titles;
+        
+        const titleCount = document.getElementById('bulk-delete-count');
+        const titleList = document.getElementById('bulk-delete-titles');
+        
+        titleCount.textContent = ids.length;
+        titleList.innerHTML = '';
+        
+        titles.forEach((title, index) => {
+            const li = document.createElement('li');
+            li.className = 'text-gray-300 text-sm py-1';
+            li.textContent = title;
+            titleList.appendChild(li);
+        });
+        
+        document.getElementById('bulk-delete-modal').classList.remove('hidden');
+        
+        // Set up the confirm button
+        const confirmBtn = document.getElementById('confirm-bulk-delete-btn');
+        confirmBtn.onclick = function() {
+            performBulkDelete(ids);
+        };
+    }
+
+    function hideBulkDeleteModal() {
+        document.getElementById('bulk-delete-modal').classList.add('hidden');
+        currentBulkDeleteIds = [];
+        currentBulkDeleteTitles = [];
+    }
+
+    function performBulkDelete(ids) {
+        fetch('/api/media/bulk-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'HX-Request': 'true'
+            },
+            body: JSON.stringify({ ids: ids })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Remove deleted items from UI
+                ids.forEach(id => {
+                    const element = document.querySelector(`[data-media-id="${id}"]`);
+                    if (element) element.remove();
+                });
+                // Refresh the media list
+                htmx.ajax('GET', '/dashboard', {target: '#media-list', swap: 'innerHTML'});
+                updateBulkDeleteButton();
+            } else {
+                alert('Some deletions failed. Check console for details.');
+            }
+            hideBulkDeleteModal();
+        })
+        .catch(err => {
+            console.error('Bulk delete error:', err);
+            alert('Failed to delete media items. Please try again.');
+            hideBulkDeleteModal();
+        });
+    }
+
+    // Close bulk delete modal on background click
+    document.getElementById('bulk-delete-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideBulkDeleteModal();
+        }
+    });
+
+    // Bulk deletion
+    function updateBulkDeleteButton() {
+        const checkboxes = document.querySelectorAll('.media-checkbox:checked');
+        const count = checkboxes.length;
+        document.getElementById('selected-count').textContent = count;
+        document.getElementById('bulk-delete-btn').disabled = count === 0;
+    }
+
+    function bulkDelete() {
+        const checkboxes = document.querySelectorAll('.media-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        
+        if (ids.length === 0) return;
+        
+        // Get titles for each selected item
+        const titles = ids.map(id => {
+            const element = document.querySelector(`[data-media-id="${id}"]`);
+            if (element) {
+                const titleElement = element.querySelector('h3');
+                return titleElement ? titleElement.textContent.trim() : `Media ${id}`;
+            }
+            return `Media ${id}`;
+        });
+        
+        showBulkDeleteModal(ids, titles);
+    }
+    </script>
+    {{ end }}

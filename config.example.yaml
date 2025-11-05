@@ -1,0 +1,25 @@
+# Removarr Configuration
+# This file only contains bootstrap settings needed to connect to the database.
+# All other settings (integrations, API keys, etc.) are managed through the web UI
+# and stored in the database.
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  base_url: "http://localhost:8080"
+  session_secret: "" # Set via REMOVARR_SESSION_SECRET env var
+  session_max_age: "168h" # 7 days
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "removarr"
+  password: "" # Set via REMOVARR_DB_PASSWORD env var
+  database: "removarr"
+  ssl_mode: "disable"
+
+logging:
+  level: "info" # debug, info, warn, error
+  format: "json" # json, text
+  file: "" # Leave empty for stdout
+

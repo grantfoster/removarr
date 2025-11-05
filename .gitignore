@@ -1,0 +1,54 @@
+# Binaries
+removarr
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Environment files
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application specific
+config.yaml
+config.yml
+unpackerr.conf
+unpackerr.log
+
+# Build artifacts
+dist/
+build/
+
+# Generated files (sqlc)
+internal/database/*.go
+!internal/database/models.go
+

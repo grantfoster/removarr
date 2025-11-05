@@ -1,0 +1,124 @@
+{{ define "media_list" }}
+    {{ if and .Media (gt (len .Media) 0) }}
+    <div class="space-y-4">
+        {{ range .Media }}
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 hover:border-gray-600 transition-colors" data-media-id="{{ .ID }}">
+            <div class="flex justify-between items-start">
+                <div class="flex items-start pr-4">
+                    <input type="checkbox" class="media-checkbox mt-1" value="{{ .ID }}" onchange="updateBulkDeleteButton()">
+                </div>
+                <div class="flex-1 flex gap-4">
+                    {{ if .PosterURL }}
+                    <div class="flex-shrink-0">
+                        <img src="{{ .PosterURL }}" alt="{{ .Title }} poster" 
+                             class="w-24 h-36 object-cover rounded-lg shadow-lg border border-gray-700"
+                             onerror="this.style.display='none'">
+                    </div>
+                    {{ end }}
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <h3 class="text-xl font-semibold text-gray-100">{{ .Title }}</h3>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                {{ if eq .Type "movie" }}bg-blue-900 text-blue-300{{ else }}bg-purple-900 text-purple-300{{ end }}">
+                                {{ .Type }}
+                            </span>
+                            {{ if .Downloaded }}
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-900 text-green-300">
+                                Downloaded
+                            </span>
+                            {{ else }}
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-700 text-gray-300">
+                                Not Downloaded
+                            </span>
+                            {{ end }}
+                        </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-400 mb-4">
+                        <div>
+                            <span class="font-medium text-gray-300">File Size:</span>
+                            <span class="ml-1">{{ .FileSize | formatBytes }}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-300">Seeding Time:</span>
+                            <span class="ml-1">{{ .SeedingTime | formatDuration }}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-300">Ratio:</span>
+                            <span class="ml-1">{{ printf "%.2f" .SeedingRatio }}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-300">Tracker:</span>
+                            <span class="ml-1">{{ .TrackerType }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <span class="text-sm font-medium text-gray-300">Eligibility:</span>
+                        {{ if .Eligible }}
+                        <span class="ml-2 px-3 py-1 text-sm font-medium rounded-full bg-green-900 text-green-300">
+                            ✓ Eligible for Deletion
+                        </span>
+                        {{ else }}
+                        <span class="ml-2 px-3 py-1 text-sm font-medium rounded-full bg-red-900 text-red-300">
+                            ✗ Not Eligible
+                        </span>
+                        {{ end }}
+                        <p class="text-sm text-gray-400 mt-1">{{ .EligibilityReason }}</p>
+                    </div>
+
+                    <div class="flex items-center space-x-2 mt-4">
+                        {{ if .RadarrURL }}
+                        <a href="{{ .RadarrURL }}" target="_blank" 
+                           class="text-sm text-blue-400 hover:text-blue-300 underline flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                            <span>Radarr</span>
+                        </a>
+                        {{ end }}
+                        {{ if .SonarrURL }}
+                        <a href="{{ .SonarrURL }}" target="_blank" 
+                           class="text-sm text-green-400 hover:text-green-300 underline flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                            <span>Sonarr</span>
+                        </a>
+                        {{ end }}
+                        {{ if .OverseerrURL }}
+                        <a href="{{ .OverseerrURL }}" target="_blank" 
+                           class="text-sm text-purple-400 hover:text-purple-300 underline flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                            <span>Overseerr</span>
+                        </a>
+                        {{ end }}
+                    </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 ml-4">
+                    {{ if .Eligible }}
+                    <button onclick="showDeleteModal({{ .ID }}, '{{ .Title }}', '{{ .Type }}')"
+                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm">
+                        Delete
+                    </button>
+                    {{ else }}
+                    <button onclick="showDeleteModal({{ .ID }}, '{{ .Title }}', '{{ .Type }}', true)"
+                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm opacity-75"
+                            title="Not eligible for deletion: {{ .EligibilityReason }}">
+                        Delete (Not Eligible)
+                    </button>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+        {{ end }}
+    </div>
+    {{ else }}
+        <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-12 text-center">
+            <p class="text-gray-400 text-lg">No media found. Click "Sync Media" to load from Sonarr/Radarr.</p>
+        </div>
+    {{ end }}
+{{ end }}

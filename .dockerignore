@@ -1,0 +1,11 @@
+.git
+.gitignore
+*.md
+test-data/
+docker-compose*.yml
+.env
+config.yaml
+*.log
+.DS_Store
+vendor/
+
