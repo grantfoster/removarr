@@ -366,6 +366,36 @@
                 </div>
                 <div class="integration-message hidden mt-2 p-3 rounded text-sm"></div>
             </form>
+            
+            {{ if .Settings.QBittorrentStats }}
+            <!-- qBittorrent Activity Card -->
+            <div class="mt-6 pt-6 border-t border-gray-700">
+                <h4 class="text-sm font-medium text-gray-300 mb-3">Activity Statistics</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-400">Total Torrents</div>
+                        <div class="text-lg font-semibold text-gray-100">{{ .Settings.QBittorrentStats.TotalTorrents }}</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">Seeding</div>
+                        <div class="text-lg font-semibold text-green-400">{{ .Settings.QBittorrentStats.SeedingTorrents }}</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">Total Upload</div>
+                        <div class="text-lg font-semibold text-gray-100">{{ .Settings.QBittorrentStats.TotalUpload | formatBytes }}</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">Total Download</div>
+                        <div class="text-lg font-semibold text-gray-100">{{ .Settings.QBittorrentStats.TotalDownload | formatBytes }}</div>
+                    </div>
+                </div>
+                {{ if .Settings.QBittorrentStats.LastSync }}
+                <div class="mt-3 text-xs text-gray-500">
+                    Last synced: {{ .Settings.QBittorrentStats.LastSync }}
+                </div>
+                {{ end }}
+            </div>
+            {{ end }}
         </div>
 
         <!-- Tautulli Card -->

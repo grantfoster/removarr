@@ -237,6 +237,10 @@ func (s *Server) setupRoutes() {
 	// HTMX endpoints (protected)
 	protectedWeb.HandleFunc("/api/media/sync", s.handleSyncMedia).Methods("POST")
 	protectedWeb.HandleFunc("/api/media/{id}", s.handleDeleteMediaHTMX).Methods("DELETE")
+	
+	// Poster proxy endpoints (protected - proxy Radarr/Sonarr posters)
+	protectedWeb.HandleFunc("/api/poster/radarr/{id}", s.handlePosterProxyRadarr).Methods("GET")
+	protectedWeb.HandleFunc("/api/poster/sonarr/{id}", s.handlePosterProxySonarr).Methods("GET")
 }
 
 func (s *Server) Start() error {

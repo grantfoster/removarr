@@ -38,6 +38,16 @@ func NewSonarrClient(baseURL, apiKey string) *SonarrClient {
 	}
 }
 
+// GetClient returns the HTTP client (for proxying)
+func (c *SonarrClient) GetClient() *http.Client {
+	return c.client
+}
+
+// GetBaseURL returns the base URL (for proxying)
+func (c *SonarrClient) GetBaseURL() string {
+	return c.baseURL
+}
+
 func (c *SonarrClient) makeRequest(method, endpoint string) (*http.Response, error) {
 	url := fmt.Sprintf("%s/api/v3%s?apikey=%s", c.baseURL, endpoint, c.apiKey)
 	req, err := http.NewRequest(method, url, nil)

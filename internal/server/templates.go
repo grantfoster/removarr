@@ -17,8 +17,10 @@ func initTemplates() error {
 	
 	// Add custom template functions
 	tmpl.Funcs(template.FuncMap{
-		"formatBytes": formatBytes,
+		"formatBytes":    formatBytes,
 		"formatDuration": formatDuration,
+		"add":            func(a, b int) int { return a + b },
+		"sub":            func(a, b int) int { return a - b },
 	})
 
 	// Parse all templates - now using unique content template names
@@ -80,6 +82,8 @@ func (s *Server) renderTemplate(w http.ResponseWriter, tmpl string, data interfa
 	tmplInstance.Funcs(template.FuncMap{
 		"formatBytes":    formatBytes,
 		"formatDuration": formatDuration,
+		"add":            func(a, b int) int { return a + b },
+		"sub":            func(a, b int) int { return a - b },
 	})
 	
 	// Determine which template should be parsed last

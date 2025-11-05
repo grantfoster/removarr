@@ -40,6 +40,16 @@ func NewRadarrClient(baseURL, apiKey string) *RadarrClient {
 	}
 }
 
+// GetClient returns the HTTP client (for proxying)
+func (c *RadarrClient) GetClient() *http.Client {
+	return c.client
+}
+
+// GetBaseURL returns the base URL (for proxying)
+func (c *RadarrClient) GetBaseURL() string {
+	return c.baseURL
+}
+
 func (c *RadarrClient) makeRequest(method, endpoint string) (*http.Response, error) {
 	url := fmt.Sprintf("%s/api/v3%s?apikey=%s", c.baseURL, endpoint, c.apiKey)
 	req, err := http.NewRequest(method, url, nil)

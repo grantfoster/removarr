@@ -90,7 +90,7 @@ func (s *EligibilityService) CheckEligibility(ctx context.Context, mediaItemID i
 			TrackerName         sql.NullString
 			TrackerType         sql.NullString
 			SeedingTime         int64
-			Ratio               float64
+			Ratio               sql.NullFloat64 // Use NullFloat64 to handle NUMERIC properly
 			RequiredTime        sql.NullInt64
 			RequiredRatio       sql.NullFloat64
 			IsSeeding           bool
@@ -115,8 +115,13 @@ func (s *EligibilityService) CheckEligibility(ctx context.Context, mediaItemID i
 		}{
 			Hash:        t.Hash,
 			SeedingTime: t.SeedingTime,
-			Ratio:       t.Ratio,
+			Ratio:       0.0, // Default to 0 if not valid
 			IsSeeding:   t.IsSeeding,
+		}
+		
+		// Convert ratio from NullFloat64
+		if t.Ratio.Valid {
+			torrent.Ratio = t.Ratio.Float64
 		}
 
 		if t.TrackerID.Valid {
@@ -162,9 +167,20 @@ func (s *EligibilityService) CheckEligibility(ctx context.Context, mediaItemID i
 		status.Reason = "All seeding requirements met"
 	}
 
-	// Use the first torrent's stats for display
+	// Use the torrent with the highest seeding time (most active) for display
 	if len(torrents) > 0 {
-		t := torrents[0]
+		var maxSeedingTime int64 = 0
+		var maxSeedingIdx int = 0
+		
+		for i, t := range torrents {
+			if t.SeedingTime > maxSeedingTime {
+				maxSeedingTime = t.SeedingTime
+				maxSeedingIdx = i
+			}
+		}
+		
+		// Use the torrent with max seeding time for display
+		t := torrents[maxSeedingIdx]
 		status.SeedingTime = t.SeedingTime
 		status.RequiredTime = t.RequiredTime
 		status.SeedingRatio = t.Ratio
@@ -172,6 +188,10 @@ func (s *EligibilityService) CheckEligibility(ctx context.Context, mediaItemID i
 		status.TrackerType = "unknown"
 		if t.TrackerType != nil {
 			status.TrackerType = *t.TrackerType
+		}
+		if t.TrackerName != nil {
+			// Use tracker name for display if available
+			status.TrackerType = *t.TrackerName
 		}
 		status.IsSeeding = t.IsSeeding
 	}

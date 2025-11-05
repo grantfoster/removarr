@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -177,8 +178,36 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	mediaType := r.URL.Query().Get("type")
 	eligible := r.URL.Query().Get("eligible")
 	downloaded := r.URL.Query().Get("downloaded")
+	
+	// Pagination
+	page := 1
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	pageSize := 50 // Items per page
+	offset := (page - 1) * pageSize
 
-	// Build query
+	// Build query - first get total count
+	countQuery := "SELECT COUNT(*) FROM media_items WHERE 1=1"
+	countArgs := []interface{}{}
+	countArgPos := 1
+
+	if mediaType != "" {
+		countQuery += fmt.Sprintf(" AND type = $%d", countArgPos)
+		countArgs = append(countArgs, mediaType)
+		countArgPos++
+	}
+
+	var totalCount int
+	err := s.db.QueryRowContext(r.Context(), countQuery, countArgs...).Scan(&totalCount)
+	if err != nil {
+		slog.Error("Failed to get media count", "error", err)
+		totalCount = 0
+	}
+
+	// Build main query
 	query := "SELECT id, title, type, tmdb_id, tvdb_id, sonarr_id, radarr_id, overseerr_request_id, requested_by_user_id, file_path, file_size, added_date, last_synced_at FROM media_items WHERE 1=1"
 	args := []interface{}{}
 	argPos := 1
@@ -189,7 +218,8 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		argPos++
 	}
 
-	query += " ORDER BY added_date DESC LIMIT 100"
+	query += fmt.Sprintf(" ORDER BY added_date DESC LIMIT $%d OFFSET $%d", argPos, argPos+1)
+	args = append(args, pageSize, offset)
 
 	rows, err := s.db.QueryContext(r.Context(), query, args...)
 	if err != nil {
@@ -322,13 +352,30 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		
 		// Generate poster URL
-		// Use Radarr/Sonarr's poster endpoint if available
-		if item.RadarrID.Valid {
-			// Radarr serves posters at /MediaCover/{movieId}/poster.jpg
-			posterURL = fmt.Sprintf("%s/MediaCover/%d/poster.jpg", s.config.Radarr.URL, item.RadarrID.Int64)
-		} else if item.SonarrID.Valid {
-			// Sonarr serves posters at /MediaCover/{seriesId}/poster.jpg
-			posterURL = fmt.Sprintf("%s/MediaCover/%d/poster.jpg", s.config.Sonarr.URL, item.SonarrID.Int64)
+		// Use TMDB API for posters (works from anywhere, not just internal services)
+		if item.TMDBID.Valid {
+			// TMDB poster API: https://image.tmdb.org/t/p/w500/{poster_path}
+			// We'll need to fetch poster_path from Radarr/Sonarr API or use a placeholder
+			// For now, use TMDB directly - but we need the poster_path
+			// Fallback: Use Radarr/Sonarr if available, but proxy through our server
+			if item.RadarrID.Valid && s.config.Radarr.Enabled && s.config.Radarr.URL != "" {
+				// Proxy through our server so it works from browser
+				posterURL = fmt.Sprintf("/api/poster/radarr/%d", item.RadarrID.Int64)
+			} else if item.SonarrID.Valid && s.config.Sonarr.Enabled && s.config.Sonarr.URL != "" {
+				// Proxy through our server so it works from browser
+				posterURL = fmt.Sprintf("/api/poster/sonarr/%d", item.SonarrID.Int64)
+			} else if item.TMDBID.Valid {
+				// Fallback: Use TMDB API (no API key needed for images)
+				// We'll need to fetch the actual poster path, but for now use placeholder
+				// TODO: Fetch actual poster path from TMDB API
+			}
+		} else {
+			// Fallback to Radarr/Sonarr direct URLs if TMDB not available
+			if item.RadarrID.Valid && s.config.Radarr.Enabled && s.config.Radarr.URL != "" {
+				posterURL = fmt.Sprintf("/api/poster/radarr/%d", item.RadarrID.Int64)
+			} else if item.SonarrID.Valid && s.config.Sonarr.Enabled && s.config.Sonarr.URL != "" {
+				posterURL = fmt.Sprintf("/api/poster/sonarr/%d", item.SonarrID.Int64)
+			}
 		}
 		
 		if item.TMDBID.Valid {
@@ -366,11 +413,21 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"downloaded": downloaded,
 	})
 
+	// Calculate pagination info
+	totalPages := (totalCount + pageSize - 1) / pageSize // Ceiling division
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
 	// Check if this is an HTMX request (for partial updates)
 	if r.Header.Get("HX-Request") != "" {
 		// Return just the media list - render the template directly, not wrapped in base
 		data := map[string]interface{}{
-			"Media": mediaItems,
+			"Media":      mediaItems,
+			"Page":       page,
+			"TotalPages": totalPages,
+			"TotalCount": totalCount,
+			"PageSize":   pageSize,
 		}
 		if err := templates.ExecuteTemplate(w, "media_list", data); err != nil {
 			http.Error(w, "Template error", http.StatusInternalServerError)
@@ -398,10 +455,14 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	data := map[string]interface{}{
-		"Media": mediaItems,
-		"Type": mediaType,  // Pass current filter values to template
-		"Eligible": eligible,
-		"Downloaded": downloaded,
+		"Media":        mediaItems,
+		"Type":         mediaType, // Pass current filter values to template
+		"Eligible":     eligible,
+		"Downloaded":   downloaded,
+		"Page":         page,
+		"TotalPages":   totalPages,
+		"TotalCount":   totalCount,
+		"PageSize":     pageSize,
 		"User": map[string]interface{}{
 			"Username": authCtx.Username,
 			"IsAdmin": authCtx.IsAdmin,
@@ -474,11 +535,26 @@ func (s *Server) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 		syncFrequency = "5m" // Default
 	}
 
+	// Get qBittorrent stats
+	var qbitStats map[string]interface{}
+	if s.config.QBittorrent.Enabled {
+		qbitStats = s.getQBittorrentStats(r.Context())
+	} else {
+		qbitStats = map[string]interface{}{
+			"TotalTorrents":   0,
+			"SeedingTorrents": 0,
+			"TotalUpload":     0,
+			"TotalDownload":   0,
+			"LastSync":        nil,
+		}
+	}
+
 	data := map[string]interface{}{
 		"User": authCtx,
 		"Config": s.config,
 		"Settings": map[string]interface{}{
 			"SyncFrequency": syncFrequency,
+			"QBittorrentStats": qbitStats,
 		},
 	}
 
@@ -1164,5 +1240,149 @@ func (s *Server) testIntegrationConnection(service string, url string, apiKey st
 	default:
 		return false, "Unknown service"
 	}
+}
+
+// handlePosterProxyRadarr proxies poster requests from Radarr
+func (s *Server) handlePosterProxyRadarr(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	movieID := vars["id"]
+	
+	if s.integrations.Radarr == nil || !s.config.Radarr.Enabled || s.config.Radarr.URL == "" {
+		http.Error(w, "Radarr not configured", http.StatusServiceUnavailable)
+		return
+	}
+	
+	// Fetch poster from Radarr
+	posterURL := fmt.Sprintf("%s/MediaCover/%s/poster.jpg", s.integrations.Radarr.GetBaseURL(), movieID)
+	req, err := http.NewRequest("GET", posterURL, nil)
+	if err != nil {
+		slog.Error("Failed to create poster request", "error", err)
+		http.Error(w, "Failed to fetch poster", http.StatusInternalServerError)
+		return
+	}
+	
+	resp, err := s.integrations.Radarr.GetClient().Do(req)
+	if err != nil {
+		slog.Error("Failed to fetch Radarr poster", "error", err, "movie_id", movieID)
+		http.Error(w, "Failed to fetch poster", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Poster not found", http.StatusNotFound)
+		return
+	}
+	
+	// Copy headers
+	for k, v := range resp.Header {
+		if k == "Content-Type" || k == "Content-Length" {
+			w.Header()[k] = v
+		}
+	}
+	
+	// Copy body
+	io.Copy(w, resp.Body)
+}
+
+// getQBittorrentStats returns statistics about tracked torrents
+func (s *Server) getQBittorrentStats(ctx context.Context) map[string]interface{} {
+	stats := map[string]interface{}{
+		"TotalTorrents":   0,
+		"SeedingTorrents": 0,
+		"TotalUpload":     0,
+		"TotalDownload":   0,
+		"LastSync":        nil,
+	}
+
+	// Get total torrent count
+	var totalCount int
+	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM torrents").Scan(&totalCount)
+	if err != nil {
+		slog.Error("Failed to get torrent count", "error", err)
+		return stats
+	}
+	stats["TotalTorrents"] = totalCount
+
+	// Get seeding torrent count
+	var seedingCount int
+	err = s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM torrents WHERE is_seeding = true").Scan(&seedingCount)
+	if err != nil {
+		slog.Error("Failed to get seeding count", "error", err)
+	} else {
+		stats["SeedingTorrents"] = seedingCount
+	}
+
+	// Get total upload/download bytes
+	var totalUpload, totalDownload sql.NullInt64
+	err = s.db.QueryRowContext(ctx,
+		"SELECT COALESCE(SUM(upload_bytes), 0), COALESCE(SUM(download_bytes), 0) FROM torrents",
+	).Scan(&totalUpload, &totalDownload)
+	if err != nil {
+		slog.Error("Failed to get torrent stats", "error", err)
+	} else {
+		if totalUpload.Valid {
+			stats["TotalUpload"] = totalUpload.Int64
+		}
+		if totalDownload.Valid {
+			stats["TotalDownload"] = totalDownload.Int64
+		}
+	}
+
+	// Get last sync time
+	var lastSync sql.NullTime
+	err = s.db.QueryRowContext(ctx,
+		"SELECT MAX(last_synced_at) FROM torrents",
+	).Scan(&lastSync)
+	if err != nil && err != sql.ErrNoRows {
+		slog.Error("Failed to get last sync time", "error", err)
+	} else if lastSync.Valid {
+		stats["LastSync"] = lastSync.Time.Format("2006-01-02 15:04:05 MST")
+	}
+
+	return stats
+}
+
+// handlePosterProxySonarr proxies poster requests from Sonarr
+func (s *Server) handlePosterProxySonarr(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seriesID := vars["id"]
+	
+	if s.integrations.Sonarr == nil || !s.config.Sonarr.Enabled || s.config.Sonarr.URL == "" {
+		http.Error(w, "Sonarr not configured", http.StatusServiceUnavailable)
+		return
+	}
+	
+	// Fetch poster from Sonarr
+	posterURL := fmt.Sprintf("%s/MediaCover/%s/poster.jpg", s.integrations.Sonarr.GetBaseURL(), seriesID)
+	req, err := http.NewRequest("GET", posterURL, nil)
+	if err != nil {
+		slog.Error("Failed to create poster request", "error", err)
+		http.Error(w, "Failed to fetch poster", http.StatusInternalServerError)
+		return
+	}
+	
+	resp, err := s.integrations.Sonarr.GetClient().Do(req)
+	if err != nil {
+		slog.Error("Failed to fetch Sonarr poster", "error", err, "series_id", seriesID)
+		http.Error(w, "Failed to fetch poster", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Poster not found", http.StatusNotFound)
+		return
+	}
+	
+	// Copy headers
+	for k, v := range resp.Header {
+		if k == "Content-Type" || k == "Content-Length" {
+			w.Header()[k] = v
+		}
+	}
+	
+	// Copy body
+	io.Copy(w, resp.Body)
 }
 

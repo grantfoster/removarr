@@ -121,4 +121,35 @@
             <p class="text-gray-400 text-lg">No media found. Click "Sync Media" to load from Sonarr/Radarr.</p>
         </div>
     {{ end }}
+    
+    {{ if and .TotalPages (gt .TotalPages 1) }}
+    <!-- Pagination -->
+    <div class="flex justify-center items-center space-x-2 mt-6">
+        {{ if gt .Page 1 }}
+        {{ $prevPage := sub .Page 1 }}
+        <button hx-get="/dashboard?page={{ $prevPage }}{{ if .Type }}&type={{ .Type }}{{ end }}{{ if .Eligible }}&eligible={{ .Eligible }}{{ end }}{{ if .Downloaded }}&downloaded={{ .Downloaded }}{{ end }}"
+                hx-include="[name='type'], [name='eligible'], [name='downloaded']"
+                hx-target="#media-list"
+                hx-swap="innerHTML"
+                class="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600">
+            Previous
+        </button>
+        {{ end }}
+        
+        <span class="text-gray-400 text-sm">
+            Page {{ .Page }} of {{ .TotalPages }} ({{ .TotalCount }} total)
+        </span>
+        
+        {{ if lt .Page .TotalPages }}
+        {{ $nextPage := add .Page 1 }}
+        <button hx-get="/dashboard?page={{ $nextPage }}{{ if .Type }}&type={{ .Type }}{{ end }}{{ if .Eligible }}&eligible={{ .Eligible }}{{ end }}{{ if .Downloaded }}&downloaded={{ .Downloaded }}{{ end }}"
+                hx-include="[name='type'], [name='eligible'], [name='downloaded']"
+                hx-target="#media-list"
+                hx-swap="innerHTML"
+                class="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600">
+            Next
+        </button>
+        {{ end }}
+    </div>
+    {{ end }}
 {{ end }}
